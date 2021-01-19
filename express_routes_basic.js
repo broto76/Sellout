@@ -8,13 +8,21 @@ const adminRoutes = require('./myRoutes/admin');
 const shopRoutes = require('./myRoutes/shop');
 const rootDir = require('./utility/path');
 const errorHandlerController = require('./controller/errorHandler');
-const sequelize = require('./utility/database');
-const Product = require('./models/product');
+
+/**
+ * Uncomment the following for using Sequelize DB
+ */
+// const sequelize = require('./utility/database');
+// const Product = require('./models/product');
+// const User = require('./models/user');
+// const Cart = require('./models/cart');
+// const CartItem = require('./models/cart-item');
+// const Order = require('./models/order');
+// const OrderItem = require('./models/order-item');
+
 const User = require('./models/user');
-const Cart = require('./models/cart');
-const CartItem = require('./models/cart-item');
-const Order = require('./models/order');
-const OrderItem = require('./models/order-item');
+
+const mongoConnect = require('./utility/database').mongoConnect;
 
 const app = express();
 
@@ -32,12 +40,31 @@ app.use(express.static(path.join(rootDir, "public")));
 
 // Populate the user field
 app.use((req, res, next) => {
-    User.findByPk(1)
-    .then(user => {
-        req.user = user;
-        next();
-    })
-    .catch(err => console.log("MainApp error while fetching user", err));
+    // Uncomment the following code if sequelize is used.
+    // This will select user[0] as the active user.
+    // User.findByPk(1)
+    // .then(user => {
+    //     req.user = user;
+    //     next();
+    // })
+    // .catch(err => console.log("MainApp error while fetching user", err));
+
+    // MongoDB Useage
+    // Find the hardcoded user
+
+    User.findById('60053c94caf0b413c59c969c')
+        .then(user => {
+            if (!user) {
+                console.log('No User Found!');
+                return;
+            }
+            req.user = new User(user.name, 
+                user.email,
+                user.cart,
+                user._id);
+            next();
+        })
+        .catch(err => console.log("MainApp error while fetching user", err));
 });
 
 // The URL would be stripped off the filter before sending it
@@ -49,70 +76,84 @@ app.use(shopRoutes);
 app.use(errorHandlerController.pageNotFoundRouter);
 
 
-/**
- * Database Relation Management
- *
- * All relations between models are established here
- * 
- */
-
-// One-to-one mapping for Product and OwnerUser model
-Product.belongsTo(User, {
-    constraints: true,
-    // Products will be deleted when the owner User is deleted
-    onDelete: 'CASCADE'
-});
-// One-to-many mapping for User and Product Model
-User.hasMany(Product);
-
-
-// One-to-one mapping for User and Cart
-User.hasOne(Cart);
-Cart.belongsTo(User);
-// Many-to-Many mapping for Cart and Product. This requires
-// an intermediate cart-item model.
-Cart.belongsToMany(Product, {through: CartItem});
-Product.belongsToMany(Cart, {through: CartItem});
-
-
-// One-to-One relation for order and user
-Order.belongsTo(User);
-// One-to_Many mapping for user and order
-User.hasMany(Order);
-// Many-to-Many mapping for Order and Product. This requires
-// an intermediate order-item model.
-Order.belongsToMany(Product, {through: OrderItem});
-Product.belongsToMany(Order, {through: OrderItem});
 
 /**
- * Verify database access and create tables if required.
- * On success, start the server.
+ * MongoDB based design
  */
-
-
-// This would create the table based on Model definations
-sequelize
-.sync()
-// .sync({force: true})
-.then(result => {
-    return User.findByPk(1);
-    //console.log(result);
-})
-.then(user => {
-    if (!user) {
-        return User.create({
-            name: 'Joe',
-            email: 'joeGreene@hello.com'
-        });
-    }
-    return user;
-})
-.then(user => {
-    user.createCart();
-})
-.then(cart => {
+mongoConnect((client) => {
     app.listen(5000);
-})
-.catch(err => {
-    console.log(err);
 });
+
+
+
+// /**
+//  * Sequelize(SQL Database) based Architecture
+//  */
+
+// /**
+//  * Database Relation Management
+//  *
+//  * All relations between models are established here
+//  * 
+//  */
+
+// // One-to-one mapping for Product and OwnerUser model
+// Product.belongsTo(User, {
+//     constraints: true,
+//     // Products will be deleted when the owner User is deleted
+//     onDelete: 'CASCADE'
+// });
+// // One-to-many mapping for User and Product Model
+// User.hasMany(Product);
+
+
+// // One-to-one mapping for User and Cart
+// User.hasOne(Cart);
+// Cart.belongsTo(User);
+// // Many-to-Many mapping for Cart and Product. This requires
+// // an intermediate cart-item model.
+// Cart.belongsToMany(Product, {through: CartItem});
+// Product.belongsToMany(Cart, {through: CartItem});
+
+
+// // One-to-One relation for order and user
+// Order.belongsTo(User);
+// // One-to_Many mapping for user and order
+// User.hasMany(Order);
+// // Many-to-Many mapping for Order and Product. This requires
+// // an intermediate order-item model.
+// Order.belongsToMany(Product, {through: OrderItem});
+// Product.belongsToMany(Order, {through: OrderItem});
+
+// /**
+//  * Verify database access and create tables if required.
+//  * On success, start the server.
+//  */
+
+
+// // This would create the table based on Model definations
+// sequelize
+// .sync()
+// // .sync({force: true})
+// .then(result => {
+//     return User.findByPk(1);
+//     //console.log(result);
+// })
+// .then(user => {
+//     if (!user) {
+//         return User.create({
+//             name: 'Joe',
+//             email: 'joeGreene@hello.com'
+//         });
+//     }
+//     return user;
+// })
+// .then(user => {
+//     user.createCart();
+// })
+// .then(cart => {
+//     app.listen(5000);
+// })
+// .catch(err => {
+//     console.log(err);
+// });
