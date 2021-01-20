@@ -13,7 +13,7 @@ shopRouter.get('/cart', shopController.getCart);
 shopRouter.post('/cart', shopController.postCart);
 shopRouter.post('/cart-delete-item', shopController.postCartDeleteItem);
 
-// shopRouter.get('/checkout', shopController.getCheckout);
+// // shopRouter.get('/checkout', shopController.getCheckout);
 
 shopRouter.post('/create-order', shopController.postOrder);
 shopRouter.get('/orders', shopController.getOrders);

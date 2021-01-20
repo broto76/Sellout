@@ -34,13 +34,13 @@ exports.postAddProduct = (req, res, next) => {
         res.redirect('/admin/add-product');
         return;
     }
-    const product = new Product(
-        title, 
-        price, 
-        description, 
-        imageURL, 
-        null,   // Product Id does not exist yet.
-        req.user._id);
+    const product = new Product({
+        title: title,
+        price: price,
+        description: description,
+        imageURL: imageURL,
+        userId: req.user._id
+    });
     product.save()
     .then(result => {
         console.log(TAG, "postAddProduct", "Created Product");
@@ -52,8 +52,13 @@ exports.postAddProduct = (req, res, next) => {
 }
 
 exports.getProductList = (req, res) => {
-    Product.fetchAll()
+    Product.find()
+    // Populate the entire User data to userId
+    //.populate('userId','name')
+    // Select the attributes needed in the fetched object
+    //.select('title price')
     .then(products => {
+        //console.log(products);
         res.render('admin/products', {
             prods: products,
             docTitle: 'Admin Products',
@@ -104,13 +109,22 @@ exports.postEditProduct = (req, res) => {
         return;
     }
     
-    const product = new Product(
-        title, 
-        price, 
-        description, 
-        imageURL, 
-        id);
-    product.save()
+    // const product = new Product(
+    //     title, 
+    //     price, 
+    //     description, 
+    //     imageURL, 
+    //     id);
+    Product.findById(id)
+    .then(product => {
+        // The product in callback is a complete mongoose object.
+        // This will have all the class methods.
+        product.title = title;
+        product.imageURL = imageURL;
+        product.price = price;
+        product.description = description;
+        return product.save();
+    })
     .then(result => {
         console.log("Updated Product!!");
         res.redirect('/admin/products');
@@ -121,7 +135,8 @@ exports.postEditProduct = (req, res) => {
 exports.postDeleteProduct = (req, res) => {
     const id = req.body.productId;
     console.log(TAG, "postDeleteProduct", id);
-    Product.deleteById(id)
+    // Product.deleteById(id)
+    Product.findByIdAndRemove(id)
     .then(result => {
         console.log(TAG, "Product id: " + id + " destroyed");
         res.redirect("/admin/products");

@@ -1,4 +1,5 @@
 const Product = require('../models/product');
+const Order = require('../models/order');
 
 const TAG = 'shop_controller';
 
@@ -13,7 +14,7 @@ const TAG = 'shop_controller';
  */
 
 exports.getProducts = (req, res, next) => {
-    Product.fetchAll()
+    Product.find()
     .then(products => {
         res.render('shop/product-list', {
             prods: products,
@@ -26,9 +27,7 @@ exports.getProducts = (req, res, next) => {
 }
 
 exports.getIndex = (req, res) => {
-    //This would send hardcoded HTMl file
-    //res.sendFile(path.join(rootDir, 'views', 'shop.html'));
-    Product.fetchAll()
+    Product.find()
     .then(products => {
         res.render('shop/index', {
             prods: products,
@@ -73,8 +72,12 @@ exports.postCart = (req, res) => {
 }
 
 exports.getCart = (req, res) => {
-    req.user.getCart()
-    .then(products => {
+    req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+        // console.log(user.cart.items);
+        const products = user.cart.items;
         res.render('shop/cart', {
             docTitle: 'My Cart',
             activePath: '/cart',
@@ -99,7 +102,37 @@ exports.postCartDeleteItem = (req, res) => {
 }
 
 exports.postOrder = (req, res) => {
-    req.user.addOrder()
+    req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+        const products = user.cart.items.map(item => {
+            return {
+                quantity: item.quantity,
+                // Use _doc to retrieve the complete data
+                product: {...item.productId._doc}
+            }
+        });
+
+        let totalPrice = 0;
+        products.forEach(product => {
+            totalPrice = totalPrice + 
+                (product.quantity * product.product.price);
+        });
+
+        const order = new Order({
+            user: {
+                name: req.user.name,
+                userId: req.user._id
+            },
+            products: products,
+            totalPrice: totalPrice
+        });
+        return order.save();
+    })
+    .then(result => {
+        return req.user.clearCart();
+    })
     .then(result => {
         res.redirect('/orders');
     })
@@ -107,7 +140,9 @@ exports.postOrder = (req, res) => {
 }
 
 exports.getOrders = (req, res) => {
-    req.user.getOrders()
+    Order.find({
+        'user.userId': req.user._id
+    })
     .then(orders => {
         res.render('shop/order', {
             docTitle: 'My Order',

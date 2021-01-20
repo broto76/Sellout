@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
+const mongoose = require('mongoose');
 // HandleBars import
 //const expressHbs = require('express-handlebars');
 
@@ -22,7 +23,8 @@ const errorHandlerController = require('./controller/errorHandler');
 
 const User = require('./models/user');
 
-const mongoConnect = require('./utility/database').mongoConnect;
+// Uncomment the following to use vanilla mongodb driver
+// const mongoConnect = require('./utility/database').mongoConnect;
 
 const app = express();
 
@@ -38,7 +40,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 // Grant access to public dir
 app.use(express.static(path.join(rootDir, "public")));
 
-// Populate the user field
+// // Populate the user field
 app.use((req, res, next) => {
     // Uncomment the following code if sequelize is used.
     // This will select user[0] as the active user.
@@ -52,16 +54,14 @@ app.use((req, res, next) => {
     // MongoDB Useage
     // Find the hardcoded user
 
-    User.findById('60053c94caf0b413c59c969c')
+    User.findById('6007042786e8f329b4f8bbbc')
         .then(user => {
             if (!user) {
                 console.log('No User Found!');
                 return;
             }
-            req.user = new User(user.name, 
-                user.email,
-                user.cart,
-                user._id);
+            // user is a full mongoose model
+            req.user = user;
             next();
         })
         .catch(err => console.log("MainApp error while fetching user", err));
@@ -75,14 +75,37 @@ app.use(shopRoutes);
 // This should only handle the undefined routes.
 app.use(errorHandlerController.pageNotFoundRouter);
 
+/** 
+ * Mongoose Useage
+ */
 
+ mongoose.connect('mongodb+srv://broto76:2WFZ8eey2s2itqO1@cluster0.0tzaa.mongodb.net/shop?retryWrites=true&w=majority')
+    .then(result => {
+        User.findOne()
+        .then(user => {
+            if (!user) {
+                const user = new User({
+                    name: 'Joe Greene',
+                    email: 'joeGreene@hotmail.com',
+                    cart: {
+                        items: []
+                    }
+                });
+                user.save();
+            } else {
+                console.log("User already exists!");
+            }
+            app.listen(5000);
+        })
+    })
+    .catch(err => console.log(TAG, "Error while connecting to db", err));
 
 /**
  * MongoDB based design
  */
-mongoConnect((client) => {
-    app.listen(5000);
-});
+// mongoConnect((client) => {
+//     app.listen(5000);
+// });
 
 
 

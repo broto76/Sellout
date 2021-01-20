@@ -14,7 +14,7 @@ adminRouter.post('/add-product', adminController.postAddProduct);
 // Complete URL : /admin/products, Method : GET
 adminRouter.get('/products', adminController.getProductList);
 
-// Complete URL : /admin/edit-product/:productId, Method : GET
+// // Complete URL : /admin/edit-product/:productId, Method : GET
 adminRouter.get('/edit-product/:productId', adminController.getEditProduct);
 // Complete URL : /admin/edit-product, Method : POST
 adminRouter.post('/edit-product', adminController.postEditProduct);
