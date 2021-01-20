@@ -79,7 +79,7 @@ app.use(errorHandlerController.pageNotFoundRouter);
  * Mongoose Useage
  */
 
- mongoose.connect('mongodb+srv://broto76:2WFZ8eey2s2itqO1@cluster0.0tzaa.mongodb.net/shop?retryWrites=true&w=majority')
+ mongoose.connect('Link to Mongo DB')
     .then(result => {
         User.findOne()
         .then(user => {
