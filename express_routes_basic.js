@@ -2,11 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const mongoose = require('mongoose');
+const mySession = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(mySession);
 // HandleBars import
 //const expressHbs = require('express-handlebars');
 
 const adminRoutes = require('./myRoutes/admin');
 const shopRoutes = require('./myRoutes/shop');
+const authRoutes = require('./myRoutes/auth');
 const rootDir = require('./utility/path');
 const errorHandlerController = require('./controller/errorHandler');
 
@@ -23,10 +26,18 @@ const errorHandlerController = require('./controller/errorHandler');
 
 const User = require('./models/user');
 
+const MONGODB_URI = 'Link To Mongo Server';
+
 // Uncomment the following to use vanilla mongodb driver
 // const mongoConnect = require('./utility/database').mongoConnect;
 
 const app = express();
+
+// create a mongodbstore for storing the session in db
+const myStore = new MongoDBStore({
+    uri: MONGODB_URI,
+    collection: 'sessions',
+});
 
 // Notify express that PUG templating engine is used
 //app.set('view engine', 'pug');
@@ -40,7 +51,15 @@ app.use(bodyParser.urlencoded({extended: false}));
 // Grant access to public dir
 app.use(express.static(path.join(rootDir, "public")));
 
-// // Populate the user field
+// Initialized the session data in the request
+app.use(mySession({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: myStore
+}));
+
+// Populate the user field
 app.use((req, res, next) => {
     // Uncomment the following code if sequelize is used.
     // This will select user[0] as the active user.
@@ -54,23 +73,33 @@ app.use((req, res, next) => {
     // MongoDB Useage
     // Find the hardcoded user
 
-    User.findById('6007042786e8f329b4f8bbbc')
-        .then(user => {
-            if (!user) {
-                console.log('No User Found!');
-                return;
-            }
-            // user is a full mongoose model
-            req.user = user;
+    if (req.session.user) {
+        User.findById(req.session.user._id)
+            .then(user => {
+                if (!user) {
+                    console.log('No User Found!');
+                    return;
+                }
+                // user is a full mongoose model
+                req.user = user;
+                if (req.url.toString() != '/login')
+                    next();
+                else
+                    res.redirect('/');
+            })
+            .catch(err => console.log("MainApp error while " +
+            "fetching user", err));
+        } else {
+            console.log("No User session found. Please Login.");
             next();
-        })
-        .catch(err => console.log("MainApp error while fetching user", err));
+        }
 });
 
 // The URL would be stripped off the filter before sending it
 // to the adminRoutes
 app.use('/admin', adminRoutes);
 app.use(shopRoutes);
+app.use(authRoutes);
 
 // This should only handle the undefined routes.
 app.use(errorHandlerController.pageNotFoundRouter);
@@ -79,7 +108,10 @@ app.use(errorHandlerController.pageNotFoundRouter);
  * Mongoose Useage
  */
 
- mongoose.connect('Link to Mongo DB')
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
     .then(result => {
         User.findOne()
         .then(user => {

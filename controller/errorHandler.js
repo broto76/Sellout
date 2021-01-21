@@ -5,6 +5,7 @@ exports.pageNotFoundRouter = (req, res, next) => {
     console.log('Page not found');
     res.render('pageNotFound', {
         docTitle: 'Page Not Found',
-        activePath: ''
+        activePath: '',
+        isAuthenticated: req.session.isLoggedIn
     });
 }

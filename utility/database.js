@@ -36,7 +36,7 @@
 
 // const mongoConnect = (callback) => {
 //     MongoClient
-//     .connect('mongodb+srv://broto76:2WFZ8eey2s2itqO1@cluster0.0tzaa.mongodb.net/shop?retryWrites=true&w=majority')
+//     .connect('<Link tp db>')
 //     .then(client => {
 //         console.log('Connected!');
 //         _db = client.db();
