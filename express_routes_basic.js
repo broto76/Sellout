@@ -4,6 +4,8 @@ const path = require('path');
 const mongoose = require('mongoose');
 const mySession = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(mySession);
+const csrf = require('csurf');
+const flash = require('connect-flash');
 // HandleBars import
 //const expressHbs = require('express-handlebars');
 
@@ -26,7 +28,7 @@ const errorHandlerController = require('./controller/errorHandler');
 
 const User = require('./models/user');
 
-const MONGODB_URI = 'Link To Mongo Server';
+const MONGODB_URI = 'Link to Mongo server';
 
 // Uncomment the following to use vanilla mongodb driver
 // const mongoConnect = require('./utility/database').mongoConnect;
@@ -38,6 +40,9 @@ const myStore = new MongoDBStore({
     uri: MONGODB_URI,
     collection: 'sessions',
 });
+
+// Initialize cusrf library
+const csrfProtection = csrf();
 
 // Notify express that PUG templating engine is used
 //app.set('view engine', 'pug');
@@ -51,13 +56,19 @@ app.use(bodyParser.urlencoded({extended: false}));
 // Grant access to public dir
 app.use(express.static(path.join(rootDir, "public")));
 
-// Initialized the session data in the request
+// Added the session data in the request via
+// a common middleware
 app.use(mySession({
     secret: 'my secret',
     resave: false,
     saveUninitialized: false,
     store: myStore
 }));
+// Check for csrf token validity for post requests
+app.use(csrfProtection);
+
+// Addinf flash middleware
+app.use(flash());
 
 // Populate the user field
 app.use((req, res, next) => {
@@ -90,9 +101,17 @@ app.use((req, res, next) => {
             .catch(err => console.log("MainApp error while " +
             "fetching user", err));
         } else {
-            console.log("No User session found. Please Login.");
+            //console.log("No User session found. Please Login.");
             next();
         }
+});
+
+// Add the common key value pairs to be passed to
+// all the ejs views.
+app.use((req, res, next) => {
+    res.locals.isAuthenticated = req.session.isLoggedIn;
+    res.locals.csrfToken = req.csrfToken();
+    next();
 });
 
 // The URL would be stripped off the filter before sending it
@@ -111,24 +130,10 @@ app.use(errorHandlerController.pageNotFoundRouter);
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-})
+    })
     .then(result => {
-        User.findOne()
-        .then(user => {
-            if (!user) {
-                const user = new User({
-                    name: 'Joe Greene',
-                    email: 'joeGreene@hotmail.com',
-                    cart: {
-                        items: []
-                    }
-                });
-                user.save();
-            } else {
-                console.log("User already exists!");
-            }
-            app.listen(5000);
-        })
+        app.listen(5000);
+        console.log('Server Running');
     })
     .catch(err => console.log(TAG, "Error while connecting to db", err));
 
