@@ -14,6 +14,7 @@ const shopRoutes = require('./myRoutes/shop');
 const authRoutes = require('./myRoutes/auth');
 const rootDir = require('./utility/path');
 const errorHandlerController = require('./controller/errorHandler');
+const cred = require('./creds');
 
 /**
  * Uncomment the following for using Sequelize DB
@@ -28,7 +29,7 @@ const errorHandlerController = require('./controller/errorHandler');
 
 const User = require('./models/user');
 
-const MONGODB_URI = 'Link to Mongo server';
+const MONGODB_URI = cred.MongoDbURI;
 
 // Uncomment the following to use vanilla mongodb driver
 // const mongoConnect = require('./utility/database').mongoConnect;
@@ -135,7 +136,7 @@ mongoose.connect(MONGODB_URI, {
         app.listen(5000);
         console.log('Server Running');
     })
-    .catch(err => console.log(TAG, "Error while connecting to db", err));
+    .catch(err => console.log("Main", "Error while connecting to db", err));
 
 /**
  * MongoDB based design
