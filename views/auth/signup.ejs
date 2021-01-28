@@ -12,22 +12,36 @@
                 <%= errorMessage %>
             </div>
         <% } %>
-        <form class="login-form" action = "/signup" method = "POST">
+        <form class="login-form" action = "/signup" 
+            method = "POST" novalidate>
             <div class="form-control">
                 <label for="name">Name </label>
-                <input type="text" name = "name" id="name">
+                <input type="text" 
+                    name = "name" 
+                    id="name" 
+                    value="<%= oldInput.name %>">
             </div>
             <div class="form-control">
                 <label for="email">E-Mail </label>
-                <input type="email" name = "email" id="email">
+                <input type="email" 
+                    class = "<%= validationErrors.find(e => e.param == 'email') ? 'invalid' : '' %>"
+                    name = "email" 
+                    id="email" 
+                    value="<%= oldInput.email %>">
             </div>
             <div class="form-control">
                 <label for="password">Password </label>
-                <input type="password" name = "password" id="password">
+                <input type="password" 
+                class = "<%= validationErrors.find(e => e.param == 'password') ? 'invalid' : '' %>"
+                    name = "password" 
+                    id="password">
             </div>
             <div class="form-control">
                 <label for="confirmPassword">Confirm Password </label>
-                <input type="password" name = "confirmPassword" id="confirmPassword">
+                <input type="password" 
+                class = "<%= validationErrors.find(e => e.param == 'confirmPassword') ? 'invalid' : '' %>"
+                    name = "confirmPassword" 
+                    id="confirmPassword">
             </div>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button type="submit">Signup</button>

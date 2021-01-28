@@ -4,6 +4,8 @@ const sendGridTransport = require('nodemailer-sendgrid-transport');
 const sgMail = require('@sendgrid/mail');
 const crpto = require('crypto');
 
+const { validationResult } = require('express-validator/check');
+
 const cred = require('../creds');
 
 sgMail.setApiKey(cred.API_KEY2);
@@ -32,13 +34,32 @@ exports.getLogin = (req, res) => {
     res.render('auth/login', {
         docTitle: 'Login',
         activePath: '/login',
-        errorMessage: error
+        errorMessage: error,
+        oldInput: {
+            email: ''
+        },
+        validationErrors: []
     });
 }
 
 exports.postLogin = (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        // Validation has failed
+        return res.status(422).render('auth/login', {
+            docTitle: 'Login',
+            activePath: '/login',
+            errorMessage: errors.array()[0].msg,
+            oldInput: {
+                email: email
+            },
+            validationErrors: errors.array()
+        });
+    }
+
     if (!email || !password) {
         req.flash('error','Invalid Input');
         console.log(TAG, "postLogin", "Empty Input Fields");
@@ -51,10 +72,19 @@ exports.postLogin = (req, res) => {
         })
         .then(user => {
             if (!user) {
-                req.flash('error','Invalid email');
+                //req.flash('error','No user found for email');
                 console.log(TAG, "postLogin", 
                     "No user found for email: " + email);
-                    return res.redirect('/login');
+                //return res.redirect('/login');
+                return res.status(422).render('auth/login', {
+                    docTitle: 'Login',
+                    activePath: '/login',
+                    errorMessage: 'No user registered with email',
+                    oldInput: {
+                        email: email
+                    },
+                    validationErrors: []
+                });
             }
             
             bcrypt.compare(password, user.password)
@@ -77,10 +107,19 @@ exports.postLogin = (req, res) => {
                             return res.redirect('/');
                         });
                     } else {
-                        req.flash('error','Invalid password');
+                        //req.flash('error','Invalid password');
                         console.log(TAG, "postLogin",
                             "Invalid Password");
-                        return res.redirect('/login');
+                        //return res.redirect('/login');
+                        return res.status(422).render('auth/login', {
+                            docTitle: 'Login',
+                            activePath: '/login',
+                            errorMessage: 'Password Wrong!',
+                            oldInput: {
+                                email: email
+                            },
+                            validationErrors: []
+                        });
                     }
                 })
                 .catch(err => {
@@ -109,7 +148,12 @@ exports.getSignup = (req, res) => {
     res.render('auth/signup', {
         docTitle: 'Signup',
         activePath: '/signup',
-        errorMessage: error
+        errorMessage: error,
+        oldInput: {
+            name: '',
+            email: ''
+        },
+        validationErrors: []
     });
 }
 
@@ -117,22 +161,30 @@ exports.postSignup = (req, res) => {
     const name = req.body.name;
     const email = req.body.email;
     const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
-    if (!name || !email || !password || !confirmPassword) {
+
+    // Verify input validation status
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        console.log(TAG, "postSignup", errors.array());
+        return res.status(422).render('auth/signup', {
+            docTitle: 'Signup',
+            activePath: '/signup',
+            errorMessage: errors.array()[0].msg,
+            oldInput: {
+                name: name,
+                email: email
+            },
+            validationErrors: errors.array()
+        });
+    }
+
+    if (!name || !email || !password) {
         req.flash('error','Invalid input');
         console.log(TAG, "postSignup", "Input fields empty");
         return res.redirect('/signup');
     }
-    User.findOne({
-        email: email
-    })
-    .then(userDoc => {
-        if (userDoc) {
-            req.flash('error','Email already registered');
-            console.log(TAG, "postSignup", "Email Already exists");
-            return res.redirect('/signup');
-        }
-        return bcrypt.hash(password, 12)
+    
+    return bcrypt.hash(password, 12)
         .then(hasedPassword => {
             const user = new User({
                 name: name,
@@ -161,8 +213,6 @@ exports.postSignup = (req, res) => {
             });
         })
         .catch(err => console.log(TAG, "postSignup", err));
-    })
-    .catch(err => console.log(TAG, "postSignup", err));
 }
 
 exports.getReset = (req, res) => {
@@ -242,7 +292,7 @@ exports.getNewPassword = (req, res) => {
     })
     .then(user => {
         if (!user) {
-            console.log(TAG, "", "Invalid token or token expired");
+            console.log(TAG, "getNewPassword", "Invalid token or token expired");
             return res.redirect('/login');
         }
 

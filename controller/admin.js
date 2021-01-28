@@ -13,13 +13,18 @@ const TAG = 'admin_controller';
  * 
  */
 
+const { validationResult } = require('express-validator/check')
+
 const Product = require('../models/product');
 
 exports.getAddProduct = (req, res, next) => {
     res.render('admin/edit-product', {
         docTitle: 'Add Product',
         activePath: '/admin/add-product',
-        editing: false
+        editing: false,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
     });
 }
 
@@ -29,10 +34,42 @@ exports.postAddProduct = (req, res, next) => {
     const imageURL = req.body.imageURL;
     const price = req.body.price;
     const description = req.body.description;
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        console.log(TAG, "postAddProduct", errors.array());
+        return res.status(422).render('admin/edit-product', {
+            docTitle: 'Add Product',
+            activePath: '/admin/add-product',
+            editing: false,
+            hasError: true,
+            errorMessage: errors.array()[0].msg,
+            validationErrors: errors.array(),
+            product: {
+                title: title,
+                price: price,
+                imageURL: imageURL,
+                description: description
+            }
+        });
+    }
+
     if (!title || !imageURL || !price || !description) {
         console.log(TAG, "postAddProduct", "Empty Data field! Ignore...");
-        res.redirect('/admin/add-product');
-        return;
+        return res.status(422).render('admin/edit-product', {
+            docTitle: 'Add Product',
+            activePath: '/admin/add-product',
+            editing: false,
+            hasError: true,
+            errorMessage: "Empty Input field(s)",
+            validationErrors: [],
+            product: {
+                title: title,
+                price: price,
+                imageURL: imageURL,
+                description: description
+            }
+        });
     }
     const product = new Product({
         title: title,
@@ -52,7 +89,10 @@ exports.postAddProduct = (req, res, next) => {
 }
 
 exports.getProductList = (req, res) => {
-    Product.find()
+    // Only fetch products owned by the current user.
+    Product.find({
+        userId: req.user._id
+    })
     // Populate the entire User data to userId
     //.populate('userId','name')
     // Select the attributes needed in the fetched object
@@ -86,12 +126,15 @@ exports.getEditProduct = (req, res, next) => {
             console.log(TAG, "postAddProduct", "No product found for id: " + prodId);
             return res.redirect('/');
         }
+        //console.log("Debug", "Description: " + product.description);
         res.render('admin/edit-product', {
             docTitle: 'Add Product',
             activePath: '/admin/edit-product',
             editing: isEditMode,
             product: product,
-            isAuthenticated: req.session.isLoggedIn
+            hasError: false,
+            errorMessage: null,
+            validationErrors: []
         });
     })
     .catch(err => console.log(TAG, "getEditProduct", err));
@@ -104,10 +147,44 @@ exports.postEditProduct = (req, res) => {
     const imageURL = req.body.imageURL;
     const price = req.body.price;
     const description = req.body.description;
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        console.log(TAG, "postEditProduct", errors.array());
+        return res.status(422).render('admin/edit-product', {
+            docTitle: 'Edit Product',
+            activePath: '/admin/add-product',
+            editing: true,
+            hasError: true,
+            errorMessage: errors.array()[0].msg,
+            validationErrors: errors.array(),
+            product: {
+                title: title,
+                price: price,
+                imageURL: imageURL,
+                description: description,
+                _id: id
+            }
+        });
+    }
+
     if (!id || !title || !imageURL || !price || !description) {
         console.log(TAG, "postAddProduct", "Empty Data field! Ignore...");
-        res.redirect('/admin/add-product');
-        return;
+        return res.status(422).render('admin/edit-product', {
+            docTitle: 'Edit Product',
+            activePath: '/admin/add-product',
+            editing: true,
+            hasError: true,
+            errorMessage: "Empty Input field(s)",
+            validationErrors: [],
+            product: {
+                title: title,
+                price: price,
+                imageURL: imageURL,
+                description: description,
+                _id: id
+            }
+        });
     }
     
     // const product = new Product(
@@ -120,15 +197,23 @@ exports.postEditProduct = (req, res) => {
     .then(product => {
         // The product in callback is a complete mongoose object.
         // This will have all the class methods.
+
+        if (product.userId.toString() !== req.user._id.toString()) {
+            console.log(TAG, "postEditProduct", "Unauthorized" +
+                " attempt to edit product");
+            return res.redirect('/');
+        }
+
         product.title = title;
         product.imageURL = imageURL;
         product.price = price;
         product.description = description;
-        return product.save();
-    })
-    .then(result => {
-        console.log("Updated Product!!");
-        res.redirect('/admin/products');
+        return product.save()
+        .then(result => {
+            console.log("Updated Product!!");
+            res.redirect('/admin/products');
+        })
+        .catch(err => console.log(TAG, "postEditProduct", err));
     })
     .catch(err => console.log(TAG, "postEditProduct", err));
 }
@@ -137,7 +222,11 @@ exports.postDeleteProduct = (req, res) => {
     const id = req.body.productId;
     console.log(TAG, "postDeleteProduct", id);
     // Product.deleteById(id)
-    Product.findByIdAndRemove(id)
+    //Product.findByIdAndRemove(id)
+    Product.deleteOne({
+        _id: id,
+        userId: req.user._id
+    })
     .then(result => {
         console.log(TAG, "Product id: " + id + " destroyed");
         res.redirect("/admin/products");

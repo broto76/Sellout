@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { check, body } = require('express-validator/check');
 
 const rootDir = require('../utility/path');
 const adminController = require('../controller/admin');
@@ -12,7 +13,26 @@ adminRouter.get('/add-product',
     isAuthenticatedChecker,
     adminController.getAddProduct);
 // Complete URL : /admin/add-product, Method : POST
-adminRouter.post('/add-product', 
+adminRouter.post('/add-product',
+    [
+        // Validate titile
+        body('title')
+            .isString()
+            .isLength({
+                min: 3
+            })
+            .trim(),
+        // Validate ImageUrl
+        body('imageURL')
+            .isURL(),
+        // Validate Description
+        body('description')
+        .isLength({
+            min: 5,
+            max: 500
+        })
+        .trim()
+    ], 
     isAuthenticatedChecker,
     adminController.postAddProduct);
 
@@ -21,14 +41,35 @@ adminRouter.get('/products',
     isAuthenticatedChecker,
     adminController.getProductList);
 
+
 // // Complete URL : /admin/edit-product/:productId, Method : GET
 adminRouter.get('/edit-product/:productId',
     isAuthenticatedChecker, 
     adminController.getEditProduct);
 // Complete URL : /admin/edit-product, Method : POST
-adminRouter.post('/edit-product', 
+adminRouter.post('/edit-product',
+    [
+        // Validate titile
+        body('title')
+            .isString()
+            .isLength({
+                min: 3
+            })
+            .trim(),
+        // Validate ImageUrl
+        body('imageURL')
+            .isURL(),
+        // Validate Description
+        body('description')
+        .isLength({
+            min: 5,
+            max: 500
+        })
+        .trim()
+    ], 
     isAuthenticatedChecker,
     adminController.postEditProduct);
+
 
 adminRouter.post('/delete-product', 
     isAuthenticatedChecker,
