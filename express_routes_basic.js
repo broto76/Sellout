@@ -6,6 +6,7 @@ const mySession = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(mySession);
 const csrf = require('csurf');
 const flash = require('connect-flash');
+const multer = require('multer');
 // HandleBars import
 //const expressHbs = require('express-handlebars');
 
@@ -45,6 +46,27 @@ const myStore = new MongoDBStore({
 // Initialize cusrf library
 const csrfProtection = csrf();
 
+// Configure multer storage options
+const fileStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'images');
+    },
+    filename: (req, file, cb) => {
+        cb(null, new Date().getTime().toString() + 
+            '-' + file.originalname);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'image/png' || 
+        file.mimetype === 'image/jpg' ||
+        file.mimetype === 'image/jpeg') {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+}
+
 // Notify express that PUG templating engine is used
 //app.set('view engine', 'pug');
 
@@ -52,10 +74,19 @@ app.set('view engine','ejs');
 // Notify engine where the HTML templates are stored
 app.set('views', 'views');
 
+// BodyParser will parse text data from HTML forms
 app.use(bodyParser.urlencoded({extended: false}));
+
+// Multer will be used for parseing binary data from files
+app.use(multer({
+    storage: fileStorage,
+    fileFilter: fileFilter
+}).single('imageFile'));
 
 // Grant access to public dir
 app.use(express.static(path.join(rootDir, "public")));
+// Grant static access to images folder. Remove /images from URL
+app.use('/images', express.static(path.join(rootDir, "images")));
 
 // Added the session data in the request via
 // a common middleware

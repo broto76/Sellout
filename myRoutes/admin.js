@@ -22,9 +22,6 @@ adminRouter.post('/add-product',
                 min: 3
             })
             .trim(),
-        // Validate ImageUrl
-        body('imageURL')
-            .isURL(),
         // Validate Description
         body('description')
         .isLength({
@@ -56,9 +53,6 @@ adminRouter.post('/edit-product',
                 min: 3
             })
             .trim(),
-        // Validate ImageUrl
-        body('imageURL')
-            .isURL(),
         // Validate Description
         body('description')
         .isLength({

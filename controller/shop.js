@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
+const PDFDocument = require('pdfkit');
+
 const Product = require('../models/product');
 const Order = require('../models/order');
 
@@ -183,6 +188,104 @@ exports.getOrders = (req, res) => {
         const error = new Error(err);
         error.httpStatusCode = 500;
         next(error);
+    });
+}
+
+exports.getInvoice = (req, res, next) => {
+    const orderId = req.params.orderId;
+
+    Order.findById(orderId)
+    .then(order => {
+        if (!order) {
+            console.log(TAG, "getInvoice",
+                "No order with id: " + orderId);
+            return res.redirect('/orders');
+        }
+        if (order.user.userId.toString() !== req.user._id.toString()) {
+            console.log(TAG, "", "Not authorized to view invoice");
+            return next(new Error('Unauthorized Access!'));
+        }
+
+        const invoiceName = 'invoice-' + orderId + '.pdf';
+        const invoicePath = path.join('data', 'invoices', invoiceName);
+
+        const pdfDoc = new PDFDocument();
+        pdfDoc.pipe(fs.createWriteStream(invoicePath));
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition',
+            'inline; ' +
+            //'attachment; ' +
+            'filename="' + invoiceName + '"');
+        pdfDoc.pipe(res);
+
+
+        pdfDoc.fontSize(30).text('Invoice\n\n', {
+            underline: true,
+            align: 'center'
+        });
+        pdfDoc.fontSize(15);
+        pdfDoc.text('Order ID: ' + order._id);
+        pdfDoc.fontSize(35);
+        pdfDoc.text('\n************************\n', {
+            align: 'center'
+        });
+        pdfDoc.fontSize(15);
+        let cnt = 1;
+        order.products.forEach(prod => {
+            pdfDoc.text(cnt + '.' + 
+                prod.product.title + ' (Quantity: ' +
+                prod.quantity + ') x (Price: ' +
+                prod.product.price + ')');
+            cnt++;
+        });
+        pdfDoc.fontSize(35);
+        pdfDoc.text('\n************************\n', {
+            align: 'center'
+        });
+        pdfDoc.fontSize(25)
+            .text('Total Price: ' + order.totalPrice);
+        pdfDoc.fontSize(12)
+            .text('\n\n\n\nThank You for shopping at Sellout!', {
+                align: 'right'
+            });
+
+        pdfDoc.end();
+
+        // Download file via preloading
+        //
+        // fs.readFile(invoicePath, (err, data) => {
+        //     if (err) {
+        //         console.log(TAG, "getInvoice", err);
+        //         return next(err);
+        //     }
+        //     res.setHeader('Content-Type', 'application/pdf');
+
+        //     // Uncomment this for inline view
+        //     // res.setHeader('Content-Disposition', 'inline');
+
+        //     // Uncomment the following line to download pdf
+        //     res.setHeader('Content-Disposition',
+        //         'attachment; ' +
+        //         'filename="' + invoiceName + '"');
+        //     res.send(data);
+        //     console.log('Downloading Invoice....');
+        // });
+
+
+        // Download file via streaming. This helps saving 
+        // server side memory.
+        //
+        // const file = fs.createReadStream(invoicePath);
+        // res.setHeader('Content-Type', 'application/pdf');
+        // res.setHeader('Content-Disposition',
+        //     'attachment; ' +
+        //     'filename="' + invoiceName + '"');
+        // file.pipe(res);
+    })
+    .catch(err => {
+        console.log(TAG, "getInvoice", err);
+        next(err);
     });
 }
 

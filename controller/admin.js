@@ -15,6 +15,8 @@ const TAG = 'admin_controller';
 
 const { validationResult } = require('express-validator/check')
 
+const fileHelper = require('../utility/file');
+
 const Product = require('../models/product');
 
 exports.getAddProduct = (req, res, next) => {
@@ -31,9 +33,12 @@ exports.getAddProduct = (req, res, next) => {
 exports.postAddProduct = (req, res, next) => {
     //console.log(TAG, "postAddProduct", req.body);
     const title = req.body.title;
-    const imageURL = req.body.imageURL;
+    //const imageURL = req.body.imageURL;
+    const imageFile = req.file;
     const price = req.body.price;
     const description = req.body.description;
+
+    console.log(TAG, "req.file: ", imageFile);
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -48,13 +53,28 @@ exports.postAddProduct = (req, res, next) => {
             product: {
                 title: title,
                 price: price,
-                imageURL: imageURL,
                 description: description
             }
         });
     }
 
-    if (!title || !imageURL || !price || !description) {
+    if (!imageFile) {
+        return res.status(422).render('admin/edit-product', {
+            docTitle: 'Add Product',
+            activePath: '/admin/add-product',
+            editing: false,
+            hasError: true,
+            errorMessage: "Invalid image uploaded",
+            validationErrors: [],
+            product: {
+                title: title,
+                price: price,
+                description: description
+            }
+        });
+    }
+
+    if (!title || !price || !description) {
         console.log(TAG, "postAddProduct", "Empty Data field! Ignore...");
         return res.status(422).render('admin/edit-product', {
             docTitle: 'Add Product',
@@ -66,11 +86,13 @@ exports.postAddProduct = (req, res, next) => {
             product: {
                 title: title,
                 price: price,
-                imageURL: imageURL,
                 description: description
             }
         });
     }
+
+    const imageURL = imageFile.path;
+
     const product = new Product({
         title: title,
         price: price,
@@ -92,7 +114,7 @@ exports.postAddProduct = (req, res, next) => {
     });
 }
 
-exports.getProductList = (req, res) => {
+exports.getProductList = (req, res, next) => {
     // Only fetch products owned by the current user.
     Product.find({
         userId: req.user._id
@@ -153,11 +175,11 @@ exports.getEditProduct = (req, res, next) => {
     });
 }
 
-exports.postEditProduct = (req, res) => {
+exports.postEditProduct = (req, res, next) => {
     //console.log(TAG, "postAddProduct", req.body);
     const id = req.body.productId;
     const title = req.body.title;
-    const imageURL = req.body.imageURL;
+    const imageFile = req.file;
     const price = req.body.price;
     const description = req.body.description;
 
@@ -174,14 +196,13 @@ exports.postEditProduct = (req, res) => {
             product: {
                 title: title,
                 price: price,
-                imageURL: imageURL,
                 description: description,
                 _id: id
             }
         });
     }
 
-    if (!id || !title || !imageURL || !price || !description) {
+    if (!id || !title || !price || !description) {
         console.log(TAG, "postAddProduct", "Empty Data field! Ignore...");
         return res.status(422).render('admin/edit-product', {
             docTitle: 'Edit Product',
@@ -193,7 +214,6 @@ exports.postEditProduct = (req, res) => {
             product: {
                 title: title,
                 price: price,
-                imageURL: imageURL,
                 description: description,
                 _id: id
             }
@@ -218,7 +238,11 @@ exports.postEditProduct = (req, res) => {
         }
 
         product.title = title;
-        product.imageURL = imageURL;
+        console.log();
+        if (imageFile) {
+            fileHelper.deleteFile(product.imageURL);
+            product.imageURL = imageFile.path;
+        }
         product.price = price;
         product.description = description;
         return product.save()
@@ -241,14 +265,22 @@ exports.postEditProduct = (req, res) => {
     });
 }
 
-exports.postDeleteProduct = (req, res) => {
+exports.postDeleteProduct = (req, res, next) => {
     const id = req.body.productId;
     console.log(TAG, "postDeleteProduct", id);
-    // Product.deleteById(id)
-    //Product.findByIdAndRemove(id)
-    Product.deleteOne({
-        _id: id,
-        userId: req.user._id
+
+    Product.findById(id)
+    .then(product => {
+        if (!product) {
+            console.log(TAG, "", 
+                "No Product found for id: " + id);
+            return res.redirect('/admin/products');
+        }
+        fileHelper.deleteFile(product.imageURL);
+        return Product.deleteOne({
+            _id: id,
+            userId: req.user._id
+        });
     })
     .then(result => {
         console.log(TAG, "Product id: " + id + " destroyed");
@@ -260,6 +292,9 @@ exports.postDeleteProduct = (req, res) => {
         error.httpStatusCode = 500;
         next(error);
     });
+
+    // Product.deleteById(id)
+    //Product.findByIdAndRemove(id)
 }
 
 

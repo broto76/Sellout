@@ -19,7 +19,7 @@
                         /admin/add-product
                     <% } %>
         
-                " method = "POST">
+                " method = "POST" enctype="multipart/form-data">
             <div class="form-control">
                 <label for="title">Title </label>
                 <input 
@@ -28,13 +28,20 @@
                     id="title" 
                     value="<% if(editing || hasError) { %><%= product.title %><% } %>">
             </div>
-            <div class="form-control">
+            <!-- <div class="form-control">
                 <label for="imageURL">Image URL </label>
                 <input 
                     type="text" 
                     name = "imageURL" 
                     id="imageURL" 
                     value="<% if(editing || hasError) { %><%= product.imageURL %><% } %>">
+            </div> -->
+            <div class="form-control">
+                <label for="imageFile">Image File </label>
+                <input 
+                    type="file" 
+                    name = "imageFile" 
+                    id="imageFile" >
             </div>
             <div class="form-control">
                 <label for="price">Price </label>

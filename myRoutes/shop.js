@@ -35,4 +35,8 @@ shopRouter.get('/orders',
 shopRouter.get('/products/:productId', 
     shopController.getProduct);
 
+shopRouter.get('/orders/:orderId',
+    isAuthenticatedChecker,
+    shopController.getInvoice);
+
 module.exports = shopRouter;
