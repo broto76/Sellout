@@ -127,7 +127,12 @@ exports.postLogin = (req, res) => {
                     return res.redirect('/login');
                 });
         })
-        .catch(err => console.log(TAG, "postLogin", err));
+        .catch(err => {
+            console.log(TAG, "postLogin", err);
+            const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+        });
 }
 
 exports.postLogout = (req, res) => {
@@ -212,7 +217,12 @@ exports.postSignup = (req, res) => {
                 html: '<h1> Your Signup with Sellout was successful. </h1>'
             });
         })
-        .catch(err => console.log(TAG, "postSignup", err));
+        .catch(err => {
+            console.log(TAG, "postSignup", err);
+            const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+        });
 }
 
 exports.getReset = (req, res) => {
@@ -274,9 +284,19 @@ exports.postReset = (req, res) => {
                 });
                 console.log("Reset Link sent to " + email);
             })
-            .catch(err => console.log(TAG, "postReset", err));
+            .catch(err => {
+                console.log(TAG, "postReset", err);
+                const error = new Error(err);
+                error.httpStatusCode = 500;
+                next(error);
+            });
         })
-        .catch(err => console.log(TAG, "postReset", err));
+        .catch(err => {
+            console.log(TAG, "postReset", err);
+            const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+        });
     })
 }
 
@@ -311,7 +331,12 @@ exports.getNewPassword = (req, res) => {
             passwordToken: token
         });
     })
-    .catch(err => console.log(TAG, "getNewPassword", err));
+    .catch(err => {
+        console.log(TAG, "getNewPassword", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
 exports.postNewPassword = (req, res) => {
@@ -343,7 +368,17 @@ exports.postNewPassword = (req, res) => {
                 res.redirect('/login');
                 console.log('Password Reset Completed for ' + resetUser.name);
             })
-            .catch(err => console.log(TAG, "postNewPassword", err));;
+            .catch(err => {
+                console.log(TAG, "postNewPassword", err);
+                const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+            });
     })
-    .catch(err => console.log(TAG, "postNewPassword", err));
+    .catch(err => {
+        console.log(TAG, "postNewPassword", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }

@@ -71,6 +71,14 @@ app.use(csrfProtection);
 // Addinf flash middleware
 app.use(flash());
 
+// Add the common key value pairs to be passed to
+// all the ejs views.
+app.use((req, res, next) => {
+    res.locals.isAuthenticated = req.session.isLoggedIn;
+    res.locals.csrfToken = req.csrfToken();
+    next();
+});
+
 // Populate the user field
 app.use((req, res, next) => {
     // Uncomment the following code if sequelize is used.
@@ -90,7 +98,7 @@ app.use((req, res, next) => {
             .then(user => {
                 if (!user) {
                     console.log('No User Found!');
-                    return;
+                    return next();
                 }
                 // user is a full mongoose model
                 req.user = user;
@@ -99,20 +107,16 @@ app.use((req, res, next) => {
                 else
                     res.redirect('/');
             })
-            .catch(err => console.log("MainApp error while " +
-            "fetching user", err));
+            .catch(err => {
+                console.log("Main", "Error while populating user", err);
+                const error = new Error(err);
+                error.httpStatusCode = 500;
+                next(error);
+            });
         } else {
             //console.log("No User session found. Please Login.");
             next();
         }
-});
-
-// Add the common key value pairs to be passed to
-// all the ejs views.
-app.use((req, res, next) => {
-    res.locals.isAuthenticated = req.session.isLoggedIn;
-    res.locals.csrfToken = req.csrfToken();
-    next();
 });
 
 // The URL would be stripped off the filter before sending it
@@ -121,8 +125,20 @@ app.use('/admin', adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
+app.get('/500', errorHandlerController.interalErrorRouter);
+
 // This should only handle the undefined routes.
 app.use(errorHandlerController.pageNotFoundRouter);
+
+// This middleware will be invoked directly when a next() is called
+// with an error argument.
+app.use((error, req, res, next) => {
+    res.render('500', {
+        docTitle: 'Error!',
+        activePath: '',
+        isAuthenticated: req.session.isLoggedIn
+    });
+});
 
 /** 
  * Mongoose Useage
@@ -136,7 +152,12 @@ mongoose.connect(MONGODB_URI, {
         app.listen(5000);
         console.log('Server Running');
     })
-    .catch(err => console.log("Main", "Error while connecting to db", err));
+    .catch(err => {
+        console.log("Main", "Error while connecting to db", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 
 /**
  * MongoDB based design

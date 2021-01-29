@@ -85,6 +85,10 @@ exports.postAddProduct = (req, res, next) => {
     })
     .catch(err => {
         console.log(TAG, "postAddProduct", err);
+        //res.status(500).redirect('/500');
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
     });
 }
 
@@ -105,8 +109,12 @@ exports.getProductList = (req, res) => {
             activePath: '/admin/products'
         });
     })
-    .catch(err => 
-        console.log(TAG, "getProductList", err));
+    .catch(err => {
+        console.log(TAG, "getProductList", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
 exports.getEditProduct = (req, res, next) => {
@@ -137,7 +145,12 @@ exports.getEditProduct = (req, res, next) => {
             validationErrors: []
         });
     })
-    .catch(err => console.log(TAG, "getEditProduct", err));
+    .catch(err => {
+        console.log(TAG, "getEditProduct", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
 exports.postEditProduct = (req, res) => {
@@ -213,9 +226,19 @@ exports.postEditProduct = (req, res) => {
             console.log("Updated Product!!");
             res.redirect('/admin/products');
         })
-        .catch(err => console.log(TAG, "postEditProduct", err));
+        .catch(err => {
+            console.log(TAG, "postEditProduct", err);
+            const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+        });
     })
-    .catch(err => console.log(TAG, "postEditProduct", err));
+    .catch(err => {
+        console.log(TAG, "postEditProduct", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
 exports.postDeleteProduct = (req, res) => {
@@ -231,7 +254,12 @@ exports.postDeleteProduct = (req, res) => {
         console.log(TAG, "Product id: " + id + " destroyed");
         res.redirect("/admin/products");
     })
-    .catch(err => console.log(TAG, "postDeleteProduct", err));
+    .catch(err => {
+        console.log(TAG, "postDeleteProduct", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
 
