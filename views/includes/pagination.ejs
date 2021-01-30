@@ -1,0 +1,20 @@
+<section class="pagination">
+    <% if (curPage != 1 && prevPage != 1) { %>
+        <a href='<%= activePath %>?page=1'>1</a>
+        ...
+    <% } %>
+    <% if (hasPrevPage) { %>
+        <a href='<%= activePath %>?page=<%= prevPage %>'><%= prevPage %></a>
+    <% } %>
+    <!--
+        If the URL has only query param, the current path is used.
+    -->
+    <a href='?page=<%= curPage %>' class='active'><%= curPage %></a>
+    <% if (hasNextPage) { %>
+        <a href='<%= activePath %>?page=<%= nextPage %>'><%= nextPage %></a>
+    <% } %>
+    <% if (curPage != lastPage && nextPage != lastPage) { %>
+        ...
+        <a href='<%= activePath %>?page=<%= lastPage %>'><%= lastPage %></a>
+    <% } %>
+</section>

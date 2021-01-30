@@ -164,6 +164,7 @@ app.use(errorHandlerController.pageNotFoundRouter);
 // This middleware will be invoked directly when a next() is called
 // with an error argument.
 app.use((error, req, res, next) => {
+    console.log('Error occured: ' + error);
     res.render('500', {
         docTitle: 'Error!',
         activePath: '',
