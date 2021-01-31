@@ -22,7 +22,15 @@ shopRouter.post('/cart-delete-item',
     isAuthenticatedChecker,
     shopController.postCartDeleteItem);
 
-// // shopRouter.get('/checkout', shopController.getCheckout);
+shopRouter.get('/checkout', 
+    isAuthenticatedChecker,
+    shopController.getCheckout);
+shopRouter.get('/checkout/success', 
+    isAuthenticatedChecker,
+    shopController.getCheckoutSuccess);
+shopRouter.get('/checkout/cancel', 
+    isAuthenticatedChecker,
+    shopController.getCheckout);
 
 shopRouter.post('/create-order', 
     isAuthenticatedChecker,

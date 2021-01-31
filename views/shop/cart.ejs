@@ -24,10 +24,19 @@
             <br><br>
             <hr>
             <div class="centered">
-                <form action="/create-order" method="POST">
+                <!-- 
+                    Use the following form if no payment logic
+                    is integrated to the app.
+                 -->
+                <!-- <form action="/create-order" method="POST">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <button class="btn" type="submit">Order Now!</button>
-                </form>
+                </form> -->
+                <!-- 
+                    Uncomment the following if payment logic is integrated
+                    via /checkout route.
+                 -->
+                <a class='btn' href='/checkout'>Order Now!</a>
             </div>
         <% } else { %>
             <h1>No Products in Cart</h1>

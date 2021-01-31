@@ -35,6 +35,12 @@ const orderSchema = new Schema({
     totalPrice: {
         type: Number,
         required: true
+    },
+    orderDate: {
+        type: String
+    },
+    orderTime: {
+        type: String
     }
 });
 

@@ -68,5 +68,8 @@ adminRouter.post('/edit-product',
 adminRouter.post('/delete-product', 
     isAuthenticatedChecker,
     adminController.postDeleteProduct);
+adminRouter.delete('/product/:productId', 
+    isAuthenticatedChecker,
+    adminController.deleteProduct);
 
 module.exports = adminRouter;

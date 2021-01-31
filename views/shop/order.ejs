@@ -24,6 +24,7 @@
                         </ul>
                         <h1> Total Price: $<%= order.totalPrice %></h1>
                         <br>
+                        <p class=orders__date>Order Date: <%= order.orderDate %></p>
                         <a href="/orders/<%= order._id %>">Download Invoice</a>
                     </li>
                 <% }); %>

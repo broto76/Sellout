@@ -297,6 +297,40 @@ exports.postDeleteProduct = (req, res, next) => {
     //Product.findByIdAndRemove(id)
 }
 
+exports.deleteProduct = (req, res, next) => {
+    const id = req.params.productId;
+    console.log(TAG, "deleteProduct", id);
+
+    Product.findById(id)
+    .then(product => {
+        if (!product) {
+            console.log(TAG, "deleteProduct", 
+                "No Product found for id: " + id);
+            return res.redirect('/admin/products');
+        }
+        fileHelper.deleteFile(product.imageURL);
+        return Product.deleteOne({
+            _id: id,
+            userId: req.user._id
+        });
+    })
+    .then(result => {
+        console.log(TAG, "Product id: " + id + " destroyed");
+        res.status(200).json({
+            message: 'Success!'
+        });
+    })
+    .catch(err => {
+        console.log(TAG, "deleteProduct", err);
+        res.status(500).json({
+            message: 'Delete Product Failed.'
+        });
+    });
+
+    // Product.deleteById(id)
+    //Product.findByIdAndRemove(id)
+}
+
 
 /**
  * 

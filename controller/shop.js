@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
+const creds = require('../creds');
+
 const PDFDocument = require('pdfkit');
+const stripe = require('stripe')(creds.STRIPE_SECRET_KEY);
 
 const Product = require('../models/product');
 const Order = require('../models/order');
@@ -58,7 +61,7 @@ exports.getProducts = (req, res, next) => {
     });
 }
 
-exports.getIndex = (req, res) => {
+exports.getIndex = (req, res, next) => {
     let page = +req.query.page;
     let totalItems;
     if (!page) {
@@ -110,12 +113,15 @@ exports.getProduct = (req, res) => {
             docTitle: product.title,
             activePath: "/products"
         });
-    }).catch(
-        (err) => console.log(TAG, "getProduct", err)
-    );
+    }).catch((err) => {
+        console.log(TAG, "getProduct", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
 }
 
-exports.postCart = (req, res) => {
+exports.postCart = (req, res, next) => {
     const prodId = req.body.productId;
     Product.findById(prodId)
     .then(product => {
@@ -133,7 +139,7 @@ exports.postCart = (req, res) => {
     });
 }
 
-exports.getCart = (req, res) => {
+exports.getCart = (req, res, next) => {
     req.user
     .populate('cart.items.productId')
     .execPopulate()
@@ -154,7 +160,7 @@ exports.getCart = (req, res) => {
     });
 }
 
-exports.postCartDeleteItem = (req, res) => {
+exports.postCartDeleteItem = (req, res, next) => {
     const prodId = req.body.productId;
     // console.log(TAG, "postCartDeleteItem", "ProductID: " + prodId);
     if (!prodId) {
@@ -173,7 +179,57 @@ exports.postCartDeleteItem = (req, res) => {
     });
 }
 
-exports.postOrder = (req, res) => {
+exports.getCheckout = (req, res, next) => {
+    let products;
+    let total;
+    req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+        products = user.cart.items;
+        total = 0;
+        products.forEach(prod => {
+            total += (prod.productId.price * prod.quantity);
+        });
+
+        return stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: products.map(p => {
+                return {
+                    name: p.productId.title,
+                    description: p.productId.description,
+                    amount: p.productId.price * 100,
+                    currency: 'INR',
+                    quantity: p.quantity
+                }
+            }),
+            // success_url: http://localhost:5000/checkout/success
+            success_url: req.protocol + '://' + 
+                            req.get('host') + '/checkout/success',
+            // cancel_url: http://localhost:5000/checkout/cancel
+            cancel_url: req.protocol + '://' + 
+                            req.get('host') + '/checkout/cancel'
+        });
+    })
+    .then(session => {
+        res.render('shop/checkout', {
+            docTitle: 'My Cart',
+            activePath: '/checkout',
+            products: products,
+            totalSum: total,
+            sessionId: session.id,
+            publishableKey: creds.STRIPE_PUBLISHABLE_KEY
+        });
+    })
+    .catch(err => {
+        console.log(TAG, "getCheckout", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
+}
+
+exports.getCheckoutSuccess = (req, res, next) => {
     req.user
     .populate('cart.items.productId')
     .execPopulate()
@@ -192,13 +248,23 @@ exports.postOrder = (req, res) => {
                 (product.quantity * product.product.price);
         });
 
+        const date = new Date();
+        const orderDate = date.getDate() + '/' + 
+            (+date.getMonth() + 1) + '/' +
+            date.getFullYear();
+        const orderTime = date.getHours() + ':' + 
+            date.getMinutes() + ':' + 
+            date.getSeconds();
+
         const order = new Order({
             user: {
                 name: req.user.name,
                 userId: req.user._id
             },
             products: products,
-            totalPrice: totalPrice
+            totalPrice: totalPrice,
+            orderDate: orderDate,
+            orderTime: orderTime
         });
         return order.save();
     })
@@ -216,7 +282,60 @@ exports.postOrder = (req, res) => {
     });
 }
 
-exports.getOrders = (req, res) => {
+exports.postOrder = (req, res, next) => {
+    req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+        const products = user.cart.items.map(item => {
+            return {
+                quantity: item.quantity,
+                // Use _doc to retrieve the complete data
+                product: {...item.productId._doc}
+            }
+        });
+
+        let totalPrice = 0;
+        products.forEach(product => {
+            totalPrice = totalPrice + 
+                (product.quantity * product.product.price);
+        });
+
+        const date = new Date();
+        const orderDate = date.getDate() + '/' + 
+            (+date.getMonth() + 1) + '/' +
+            date.getFullYear();
+        const orderTime = date.getHours() + ':' + 
+            date.getMinutes() + ':' + 
+            date.getSeconds();
+
+        const order = new Order({
+            user: {
+                name: req.user.name,
+                userId: req.user._id
+            },
+            products: products,
+            totalPrice: totalPrice,
+            orderDate: orderDate,
+            orderTime: orderTime
+        });
+        return order.save();
+    })
+    .then(result => {
+        return req.user.clearCart();
+    })
+    .then(result => {
+        res.redirect('/orders');
+    })
+    .catch(err => {
+        console.log(TAG, "postOrder", err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
+    });
+}
+
+exports.getOrders = (req, res, next) => {
     Order.find({
         'user.userId': req.user._id
     })
@@ -268,8 +387,10 @@ exports.getInvoice = (req, res, next) => {
             underline: true,
             align: 'center'
         });
-        pdfDoc.fontSize(15);
+        pdfDoc.fontSize(12);
         pdfDoc.text('Order ID: ' + order._id);
+        pdfDoc.text('\nInvoice genration Date: ' + 
+            order.orderDate + '  ' + order.orderTime);
         pdfDoc.fontSize(35);
         pdfDoc.text('\n************************\n', {
             align: 'center'
