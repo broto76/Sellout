@@ -68,4 +68,6 @@ authRouter.post('/reset', authController.postReset);
 authRouter.get('/reset/:token', authController.getNewPassword);
 authRouter.post('/new-password', authController.postNewPassword);
 
+authRouter.get('/verifyUser/:token', authController.getUserVerification);
+
 module.exports = authRouter;

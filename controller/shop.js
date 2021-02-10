@@ -37,7 +37,8 @@ exports.getProducts = (req, res, next) => {
         totalItems = totalProducts;
         return Product.find()
         .skip((page - 1) * ITEM_PER_PAGE)
-        .limit(ITEM_PER_PAGE); 
+        .limit(ITEM_PER_PAGE)
+        .populate('userId'); 
     })
     .then(products => {
         res.render('shop/product-list', {
@@ -75,7 +76,8 @@ exports.getIndex = (req, res, next) => {
         totalItems = totalProducts;
         return Product.find()
         .skip((page - 1) * ITEM_PER_PAGE)   // Starting index for fetching
-        .limit(ITEM_PER_PAGE);            // Number of items from ^ index
+        .limit(ITEM_PER_PAGE)
+        .populate('userId');            // Number of items from ^ index
     })
     .then(products => {
         res.render('shop/index', {
@@ -102,6 +104,7 @@ exports.getIndex = (req, res, next) => {
 exports.getProduct = (req, res) => {
     const prodId = req.params.productId;
     Product.findById(prodId)
+    .populate('userId')
     .then(product => {
         if (!product) {
             console.log(TAG, "getProduct", "No product found for id: " + prodId);

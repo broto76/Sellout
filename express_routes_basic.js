@@ -1,12 +1,18 @@
+const path = require('path');
+const fs = require('fs');
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const path = require('path');
+
 const mongoose = require('mongoose');
 const mySession = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(mySession);
 const csrf = require('csurf');
 const flash = require('connect-flash');
 const multer = require('multer');
+const helmet = require('helmet');
+const compression = require('compression');
+//const morgan = require('morgan');
 // HandleBars import
 //const expressHbs = require('express-handlebars');
 
@@ -74,6 +80,28 @@ app.set('view engine','ejs');
 // Notify engine where the HTML templates are stored
 app.set('views', 'views');
 
+// const accessLogStream = fs.createWriteStream(
+//     path.join(__dirname, 'access.log'), {
+//         flags: 'a'  // Append logs
+//     });
+
+app.use(helmet());
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            'default-src': ["'self'"],
+            'script-src': ["'self'", "'unsafe-inline'", 'js.stripe.com'],
+            'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+            'frame-src': ["'self'", 'js.stripe.com'],
+            'font-src': ["'self'", 'fonts.googleapis.com', 'fonts.gstatic.com']
+        },
+    })
+)
+app.use(compression());
+// app.use(morgan('combined', {
+//     stream: accessLogStream
+// }));
+
 // BodyParser will parse text data from HTML forms
 app.use(bodyParser.urlencoded({extended: false}));
 
@@ -124,6 +152,8 @@ app.use((req, res, next) => {
     // MongoDB Useage
     // Find the hardcoded user
 
+    //console.log('Domain: ' + req.headers.host);
+
     if (req.session.user) {
         User.findById(req.session.user._id)
             .then(user => {
@@ -132,6 +162,7 @@ app.use((req, res, next) => {
                     return next();
                 }
                 // user is a full mongoose model
+                //console.log('User: ' + user.name + ' verification: ' + user.isVerified);
                 req.user = user;
                 if (req.url.toString() != '/login')
                     next();
@@ -181,8 +212,10 @@ mongoose.connect(MONGODB_URI, {
     useUnifiedTopology: true
     })
     .then(result => {
-        app.listen(5000);
-        console.log('Server Running');
+        //app.listen(5000);
+        const port = (process.env.PORT || 5000);
+        app.listen(port);
+        console.log('Server Running on port: ' + port);
     })
     .catch(err => {
         console.log("Main", "Error while connecting to db", err);

@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const sendGridTransport = require('nodemailer-sendgrid-transport');
 const sgMail = require('@sendgrid/mail');
-const crpto = require('crypto');
+const crypto = require('crypto');
 
 const { validationResult } = require('express-validator/check');
 
@@ -167,6 +167,8 @@ exports.postSignup = (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
 
+    let user;
+
     // Verify input validation status
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -191,10 +193,11 @@ exports.postSignup = (req, res) => {
     
     return bcrypt.hash(password, 12)
         .then(hasedPassword => {
-            const user = new User({
+            user = new User({
                 name: name,
                 email: email,
                 password: hasedPassword,
+                isVerified: false,
                 cart: {
                     items: []
                 }
@@ -210,19 +213,106 @@ exports.postSignup = (req, res) => {
             //     subject: 'Welcome to Sellout',
             //     html: '<h1> Your Signup with Sellout was successful. </h1>'
             // });
-            return sgMail.send({
-                to: email,
-                from: 'sahaanibrata@gmail.com',
-                subject: 'Welcome to Sellout',
-                html: '<h1> Your Signup with Sellout was successful. </h1>'
-            });
+            return sendSignupMail(req, user);
         })
         .catch(err => {
             console.log(TAG, "postSignup", err);
             const error = new Error(err);
             error.httpStatusCode = 500;
-            next(error);
+            //next(error);
         });
+}
+
+function sendSignupMail(req, user) {
+    crypto.randomBytes(32, (err, buffer) => {
+        if (err) {
+            console.log(TAG, "sendSignupMail failed", err);
+            return;
+        }
+        const token = buffer.toString('hex');
+        console.log('Verification token generated: ' + token);
+        user.verificationToken = token;
+        user.save()
+            .then(result => {
+                const VERIFY_URL = 'http://' + req.headers.host + '/verifyUser/' + token;
+                sgMail.send({
+                    to: user.email,
+                    from: 'sahaanibrata@gmail.com',
+                    subject: 'Welcome to Sellout',
+                    html: `
+                        <h1> Your Signup with Sellout was successful. </h1>
+                        <br><br>
+                        <p>Please use this <a href='${VERIFY_URL}'>link</a> to activate your account</p>
+                        `
+                });
+                console.log('Signup Mail Sent with verification URL: ' + VERIFY_URL);
+            })
+            .catch(err => {
+                console.log(TAG, "sendSignupMail failed", err);
+                return;
+            });
+    });
+}
+
+exports.getUserVerification = (req, res, next) => {
+    const token = req.params.token;
+    let message;
+    let userData;
+    if (!token) {
+        message = "Invalid URL. Request Rejected!!";
+        return res.status(422).render('auth/userVerification', {
+            docTitle: 'Access Denied!',
+            activePath: '',
+            message: message
+        });
+    }
+    User.findOne({
+        verificationToken: token
+    })
+    .then(user => {
+        userData = user;
+        if (!user) {
+            console.log('Invalid URL. Request Rejected!!');
+            message = "Invalid URL. Request Rejected!!";
+            return res.status(422).render('auth/userVerification', {
+                docTitle: 'Access Denied!',
+                activePath: '',
+                message: message
+            });
+        }
+        user.isVerified = true;
+        user.verificationToken = "";
+        return user.save()
+        .then(result => {
+            if (!userData) {
+                message = "Invalid URL. Request Rejected!!";
+                return res.status(422).render('auth/userVerification', {
+                    docTitle: 'Access Denied!',
+                    activePath: '',
+                    message: message
+                });
+            }
+            console.log('Verification success for user: ' + userData.name);
+            message = `Congrats ${userData.name}!! Your profile is now verified.`;
+            return res.status(200).render('auth/userVerification', {
+                docTitle: 'Account verified!',
+                activePath: '',
+                message: message
+            });
+        })
+        .catch(err => {
+            console.log(TAG, "getUserVerification", err);
+                const error = new Error(err);
+                error.httpStatusCode = 500;
+                next(error);
+        });
+    })
+    .catch(err => {
+        console.log(TAG, "getUserVerification", err);
+            const error = new Error(err);
+            error.httpStatusCode = 500;
+            next(error);
+    });
 }
 
 exports.getReset = (req, res) => {
@@ -246,7 +336,7 @@ exports.postReset = (req, res) => {
         req.flash('error','Email Address is empty');
         return res.redirect('/reset');
     }
-    crpto.randomBytes(32, (err, buffer) => {
+    crypto.randomBytes(32, (err, buffer) => {
         if (err) {
             console.log(TAG, "postReset", err);
             req.flash('error','Error encountered while ' +

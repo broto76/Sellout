@@ -18,6 +18,11 @@ const userSchema = new Schema({
     },
     resetToken: String,
     resetTokenExpiry: Date,
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationToken: String,
     cart: {
         items: [{
             productId: {
