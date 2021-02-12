@@ -35,7 +35,31 @@ const userSchema = new Schema({
                 required: true
             }
         }]
-    }
+    },
+    userMessageData: [{
+        remoteUser: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            //type: String,
+            required: true
+        },
+        messages: [{
+            // True if outgoing
+            // False if incoming
+            direction: {
+                type: Boolean,
+                required: true
+            },
+            message: {
+                type: String,
+                required: true
+            },
+            time: {
+                type: Date,
+                required: true
+            }
+        }]
+    }]
 });
 
 userSchema.methods.addToCart = function(product) {

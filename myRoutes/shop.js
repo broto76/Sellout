@@ -47,4 +47,16 @@ shopRouter.get('/orders/:orderId',
     isAuthenticatedChecker,
     shopController.getInvoice);
 
+shopRouter.get('/messages-main',
+    isAuthenticatedChecker,
+    shopController.getMessagesMain);
+
+shopRouter.get('/messages/:remoteUser',
+    isAuthenticatedChecker,
+    shopController.getMessages);
+
+shopRouter.post('/sendMessage',
+    isAuthenticatedChecker,
+    shopController.postSendMessage);
+
 module.exports = shopRouter;

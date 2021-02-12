@@ -1,0 +1,27 @@
+<%- include('../includes/start.ejs') %>
+<link rel="stylesheet" href="/css/message.css">
+</head>
+<body>
+
+    <%- include('../includes/navigation.ejs') %>
+
+    <main>
+        <div class="list-grid">
+            <% if (messageData.length > 0) { %>
+                <% for (let data of messageData) { %>
+                    <article class="card message__main-item">
+                        <header class="card__header">
+                            <h1 class="message__main__title"> <%= data.remoteUser.name %> </h1>
+                        </header>
+                        <div class="card__actions">
+                            <a href="/messages/<%= data.remoteUser._id %>">Show Messages</a>
+                        </div>
+                    </article>
+                <% } %>
+            <% } else { %>
+                <h1> No Messages Found! </h1>
+            <% } %>
+        </div>
+    </main>
+    
+<%- include('../includes/end.ejs') %>

@@ -85,18 +85,18 @@ app.set('views', 'views');
 //         flags: 'a'  // Append logs
 //     });
 
-app.use(helmet());
-app.use(
-    helmet.contentSecurityPolicy({
-        directives: {
-            'default-src': ["'self'"],
-            'script-src': ["'self'", "'unsafe-inline'", 'js.stripe.com'],
-            'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
-            'frame-src': ["'self'", 'js.stripe.com'],
-            'font-src': ["'self'", 'fonts.googleapis.com', 'fonts.gstatic.com']
-        },
-    })
-)
+// app.use(helmet());
+// app.use(
+//     helmet.contentSecurityPolicy({
+//         directives: {
+//             'default-src': ["'self'", 'www.dlf.pt'],
+//             'script-src': ["'self'", "'unsafe-inline'", 'js.stripe.com'],
+//             'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+//             'frame-src': ["'self'", 'js.stripe.com'],
+//             'font-src': ["'self'", 'fonts.googleapis.com', 'fonts.gstatic.com']
+//         },
+//     })
+// );
 app.use(compression());
 // app.use(morgan('combined', {
 //     stream: accessLogStream
@@ -135,6 +135,7 @@ app.use(flash());
 app.use((req, res, next) => {
     res.locals.isAuthenticated = req.session.isLoggedIn;
     res.locals.csrfToken = req.csrfToken();
+    res.locals.socketIoUrl = 'http://' + req.headers.host + '/socket.io/socket.io.js';
     next();
 });
 
@@ -214,14 +215,20 @@ mongoose.connect(MONGODB_URI, {
     .then(result => {
         //app.listen(5000);
         const port = (process.env.PORT || 5000);
-        app.listen(port);
+        const server = app.listen(port);
         console.log('Server Running on port: ' + port);
+        
+        const io = require('socket.io')(server);
+        require('./socket-server').setIo(io);
+        io.on('connection', (socket) => {
+            //console.log('Client connected');
+        });
     })
     .catch(err => {
         console.log("Main", "Error while connecting to db", err);
         const error = new Error(err);
         error.httpStatusCode = 500;
-        next(error);
+        //next(error);
     });
 
 /**

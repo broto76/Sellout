@@ -1,0 +1,32 @@
+<%- include('../includes/start.ejs') %>
+<link rel="stylesheet" href="/css/message.css">
+</head>
+<body>
+
+    <%- include('../includes/navigation.ejs') %>
+
+    <main>
+        <div class="list-grid" id='message-list'>
+            <% if (messages.length > 0) { %>
+
+                <% for (let message of messages) { %>
+                    <article class="card message-data <%= (message.direction)?'message-sent':'message-received' %>"> <p><%= message.message %></p> </article>
+                <% } %>
+
+            <% } else { %>
+                <article class="card message-data message-sent"> No Messages Found! </article>
+            <% } %>
+
+            <form class="message-form" id="message-form" action='/sendMessage' method='POST' autocomplete="off">
+                <input class="message-input" type="text" name="messageInput" id="messageInput">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" id="remoteUser" name="remoteUser" value="<%= remoteUser._id %>">
+                <input type="hidden" id="currentUser" name="currentUser" value="<%= currentUser %>">
+                <button class="message-send-button" type="submit">Send</button>
+            </form>
+        </div>
+    </main>
+    
+<%- include('../includes/end.ejs') %>
+<script src="<%= socketIoUrl %>"></script>
+<script src="/js/message-sync.js"></script>

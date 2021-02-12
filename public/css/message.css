@@ -1,0 +1,44 @@
+.message__main-item {
+    width: 20rem;
+    max-width: 95%;
+    margin: 1rem;
+}
+
+.message__main__title {
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.message-data {
+    width: 60rem;
+    max-width: 80%;
+    padding: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.message-received {
+    text-align: left;
+    margin-right: 1rem;
+    padding-left: 1rem;
+    background-color: bisque;
+}
+
+.message-sent {
+    text-align: right;
+    background-color: thistle;
+    margin-left: 1rem;
+    padding-right: 1rem;
+}
+
+.message-input {
+    width: 40rem;
+    height: 2rem;
+    max-width: 95%;
+    margin: 1rem;
+}
+
+.message-send-button {
+    width: 15rem;
+    height: 2rem;
+}
+

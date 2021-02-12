@@ -8,6 +8,7 @@ const stripe = require('stripe')(creds.STRIPE_SECRET_KEY);
 
 const Product = require('../models/product');
 const Order = require('../models/order');
+const User = require('../models/user');
 
 const TAG = 'shop_controller';
 
@@ -456,6 +457,109 @@ exports.getInvoice = (req, res, next) => {
         console.log(TAG, "getInvoice", err);
         next(err);
     });
+}
+
+exports.getMessagesMain = async (req, res, next) => {
+    const user = await req.user.populate('userMessageData.remoteUser').execPopulate();
+    const messageData = user.userMessageData;
+    // console.log('Remote users: ' + messageData.length);
+    // messageData.forEach(data => {
+    //     console.log("Remote User: " + data.remoteUser.name);
+    //     data.messages.forEach(message => {
+    //         console.log((message.direction?"<- ":"-> ") + message.message);
+    //     });
+    //     console.log("\n");
+    // });
+    res.render('shop/message-main', {
+        docTitle: 'Messages',
+        activePath: '/messages',
+        messageData: messageData
+    });
+}
+
+exports.getMessages = async (req, res, next) => {
+    const remoteUserId = req.params.remoteUser;
+    const user = await req.user.populate('userMessageData.remoteUser').execPopulate();
+    const messageData = user.userMessageData.find(data => {
+        return data.remoteUser._id.toString() == remoteUserId.toString();
+    });
+    if (!messageData) {
+        console.log('No message data');
+        // Creating for primary user
+        req.user.userMessageData.push({
+            remoteUser: remoteUserId,
+            messages: []
+        });
+        await req.user.save();
+        // Creating for remote user
+        const awayUser = await User.findById(remoteUserId);
+        awayUser.userMessageData.push({
+            remoteUser: user._id,
+            messages: []
+        });
+        await awayUser.save();
+        return res.redirect('/messages/' + remoteUserId);
+    }
+    const messages = messageData.messages;
+    res.render('shop/show-messages', {
+        docTitle: messageData.remoteUser.name,
+        activePath: '/messages',
+        remoteUser: messageData.remoteUser,
+        currentUser: req.user._id,
+        messages: messages
+    });
+}
+
+exports.postSendMessage = async (req, res, next) => {
+    const message = req.body.messageInput;
+    const remoteUser = req.body.remoteUser;
+    if (!message) {
+        console.log(TAG, "postSendMessage", 'Invalid Request');
+        res.redirect('/messages/' + remoteUser);
+    }
+    // console.log('Message: ' + message);
+    // console.log('remoteUser: ' + remoteUser);
+
+    // Add message to current user.
+    let messageDataIndex = req.user.userMessageData.findIndex(data => {
+        return data.remoteUser.toString() == remoteUser.toString();
+    });
+    if (messageDataIndex < 0) {
+        console.log('Primary User. No messagedata created for this combo. FATAL Error.');
+        return;
+    }
+    const messageObject = {
+        direction: true,
+        message: message,
+        time: new Date()
+    }
+    req.user.userMessageData[messageDataIndex].messages.push(messageObject);
+    console.log("Updaing database. UserId: " + req.user._id + " message: " + messageObject.message);
+    await req.user.save();
+    
+    // Add message to remote user.
+    const awayUser = await User.findById(remoteUser);
+    messageDataIndex = awayUser.userMessageData.findIndex(data => {
+        return data.remoteUser.toString() == req.user._id.toString();
+    });
+    if (messageDataIndex < 0) {
+        console.log('Remote User. No messagedata created for this combo. FATAL Error.');
+        return;
+    }
+    messageObject.direction = false;
+    awayUser.userMessageData[messageDataIndex].messages.push(messageObject);
+    console.log("Updaing database. UserId: " + awayUser._id + " message: " + messageObject.message);
+    await awayUser.save();
+
+    // TODO: implement socket.io to notify remote user
+    require('../socket-server').getIo().emit('updateChat', {
+        sender: req.user._id.toString(),
+        recepient: remoteUser.toString(),
+        data: messageObject
+    });
+    console.log('Sent payload from server');
+
+    res.redirect('/messages/' + remoteUser);
 }
 
 /**

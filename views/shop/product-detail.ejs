@@ -14,6 +14,12 @@
         <h2><%= product.price %></h2>
         <p><%= product.description %></p>
         <%- include('../includes/add-to-cart.ejs') %>
+        <br>
+        <br>
+        <hr>
+        <h2 class="seller__details__heading">Seller Details: </h2>
+        <p class="seller__details__name"><%= product.userId.name %> (<%= product.userId.email %>)</p>
+        <a href="/messages/<%= product.userId._id %>">Contact Seller</a>
     </main>
 
 <%- include('../includes/end.ejs') %>
