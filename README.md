@@ -1,4 +1,9 @@
 # Sellout
+
+<img src=https://nodejs.org/static/images/logos/nodejs-new-pantone-black.svg width="200" />
+
+<br>
+
 A web based application running on Nodejs runtime which allows sellers to list their products and the buyers to buy them online. The server is hosted on Nodejs runtime developed using javascript. The UI is rendered using the EJS view engine and styled using CSS.
 <br><br>
 Features:
